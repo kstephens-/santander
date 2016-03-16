@@ -65,27 +65,37 @@ def remove_highly_correlated_columns(train, test):
 
 def remove_highly_correlated_columns_man(df):
 
+    df.drop(['ind_var13_medio', 'num_var29_0', 'ind_var18', 'ind_var39',
+             'ind_var37', 'ind_var34', 'ind_var32', 'num_var32',
+             'num_var34', 'num_var37', 'num_var39', 'num_var13_medio',
+             'saldo_var29', 'delta_num_reemb_var13_1y3',
+             'saldo_medio_var13_medio_ult1', 'ind_var29_0',
+             'delta_num_trasp_var33_in_1y3', 'delta_num_trasp_var17_in_1y3',
+             'num_var18', 'ind_var25', 'ind_var26', 'ind_var29',
+             'num_var29', 'num_var26', 'num_var25', 'delta_num_trasp_var33_out_1y3',
+             'delta_num_reemb_var17_1y3'], axis=1, inplace=True)
+
     # remove highly correlated columns
-    df.drop(['ind_var29_0', 'num_var29_0', 'num_var6',
-             'num_var13_corto', 'num_var13_medio_0', 'num_meses_var13_medio_ult3',
-             'num_var18_0', 'delta_imp_amort_var18_1y3', 'ind_var26',
-             'ind_var32', 'num_var34_0', 'delta_imp_amort_var34_1y3',
-             'ind_var39', 'num_var26', 'num_var32', 'saldo_var29',
-             'imp_amort_var18_ult1', 'delta_num_aport_var17_1y3',
-             'delta_num_compra_var44_1y3', 'num_reemb_var13_ult1',
-             'num_trasp_var17_in_ult1',
-             'delta_num_trasp_var33_out_1y3', 'num_trasp_var33_out_ult1',
-             'num_var7_emit_ult1', 'num_var6_0',
-             'ind_var29', 'num_var29', 'ind_var13_medio', 'num_var13_medio',
-             'ind_var18', 'num_var18', 'num_var24', 'ind_var25', 'ind_var34',
-             'num_var34', 'ind_var37', 'num_var44', 'num_var25', 'num_var37',
-             'saldo_medio_var13_medio_ult1', 'delta_num_aport_var13_1y3',
-             'delta_num_aport_var33_1y3', 'delta_num_reemb_var13_1y3',
-             'delta_num_reemb_var17_1y3',
-             'delta_num_trasp_var17_in_1y3',
-             'delta_num_trasp_var33_in_1y3', 'imp_trasp_var33_out_ult1',
-             'delta_num_venta_var44_1y3', 'num_trasp_var17_in_hace3',
-             'num_op_var39_efect_ult3'], axis=1, inplace=True)
+    # df.drop(['ind_var29_0', 'num_var29_0', 'num_var6',
+    #          'num_var13_corto', 'num_var13_medio_0', 'num_meses_var13_medio_ult3',
+    #          'num_var18_0', 'delta_imp_amort_var18_1y3', 'ind_var26',
+    #          'ind_var32', 'num_var34_0', 'delta_imp_amort_var34_1y3',
+    #          'ind_var39', 'num_var26', 'num_var32', 'saldo_var29',
+    #          'imp_amort_var18_ult1', 'delta_num_aport_var17_1y3',
+    #          'delta_num_compra_var44_1y3', 'num_reemb_var13_ult1',
+    #          'num_trasp_var17_in_ult1',
+    #          'delta_num_trasp_var33_out_1y3', 'num_trasp_var33_out_ult1',
+    #          'num_var7_emit_ult1', 'num_var6_0',
+    #          'ind_var29', 'num_var29', 'ind_var13_medio', 'num_var13_medio',
+    #          'ind_var18', 'num_var18', 'num_var24', 'ind_var25', 'ind_var34',
+    #          'num_var34', 'ind_var37', 'num_var44', 'num_var25', 'num_var37',
+    #          'saldo_medio_var13_medio_ult1', 'delta_num_aport_var13_1y3',
+    #          'delta_num_aport_var33_1y3', 'delta_num_reemb_var13_1y3',
+    #          'delta_num_reemb_var17_1y3',
+    #          'delta_num_trasp_var17_in_1y3',
+    #          'delta_num_trasp_var33_in_1y3', 'imp_trasp_var33_out_ult1',
+    #          'delta_num_venta_var44_1y3', 'num_trasp_var17_in_hace3',
+    #          'num_op_var39_efect_ult3'], axis=1, inplace=True)
 
     # remove linear combination columns
     # df.drop(['ind_var13', 'num_var1', 'num_var8', 'num_var14_0',

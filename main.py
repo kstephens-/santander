@@ -7,8 +7,8 @@ import features
 from sklearn.cross_validation import StratifiedKFold
 from sklearn.metrics import roc_auc_score
 
-submit = False
-version = '0.03'
+submit = True
+version = '0.04'
 
 
 def xgboost_model(train, labels, test):
