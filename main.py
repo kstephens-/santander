@@ -8,7 +8,7 @@ from sklearn.cross_validation import StratifiedKFold
 from sklearn.metrics import roc_auc_score
 
 submit = False
-version = '0.02'
+version = '0.03'
 
 
 def xgboost_model(train, labels, test):
@@ -20,11 +20,11 @@ def xgboost_model(train, labels, test):
     params['eta'] = 0.01
     params['gamma'] = 0
     params['max_depth'] = 6
-    params['min_child_weight'] = 1
+    params['min_child_weight'] = 0.5
     params['max_delta_setp'] = 0
-    params['subsample'] = 1
-    params['colsample_bytree'] = 1
-    params['labmda'] = 1
+    params['subsample'] = 0.4
+    params['colsample_bytree'] = 0.6
+    params['lambda'] = 1
     params['alpha'] = 0
 
     params['silent'] = 1
@@ -32,7 +32,7 @@ def xgboost_model(train, labels, test):
     xgtrain = xgb.DMatrix(train, labels)
     xgtest = xgb.DMatrix(test)
 
-    num_rounds = 300
+    num_rounds = 600
     m = xgb.train(list(params.items()), xgtrain, num_rounds)
     return m, m.predict(xgtest)
 
@@ -64,6 +64,8 @@ for index, (train_index, test_index) in enumerate(StratifiedKFold(y, n_folds=5, 
     # add features
     train = features.add_features(train)
     test = features.add_features(test)
+
+    #train, test = features.add_train_dependant_features(train, test)
 
     labels = train.TARGET.values
     idx = test.ID.values

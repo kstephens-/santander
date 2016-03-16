@@ -1,7 +1,8 @@
 import pandas as pd
 import numpy as np
 
-from sklearn.preprocessing import MaxAbsScaler
+from scipy.spatial import distance
+from sklearn.preprocessing import maxabs_scale
 
 
 def remove_empty_columns(df):
@@ -11,12 +12,20 @@ def remove_empty_columns(df):
              'ind_var46', 'num_var27_0', 'num_var28_0', 'num_var28',
              'num_var27', 'num_var41', 'num_var46_0', 'num_var46',
              'saldo_var28', 'saldo_var27', 'saldo_var41', 'saldo_var46',
+             'delta_imp_reemb_var33_1y3', 'delta_imp_trasp_var17_out_1y3',
+             'delta_num_reemb_var33_1y3', 'delta_num_trasp_var17_out_1y3',
              'imp_amort_var18_hace3', 'imp_amort_var34_hace3', 'imp_reemb_var13_hace3',
-             'imp_reemb_var33_hace3', 'imp_trasp_var17_out_hace3', 'imp_trasp_var33_out_hace3',
-             'num_var2_0_ult1', 'num_var2_ult1', 'num_reemb_var13_hace3',
+             'imp_reemb_var17_hace3',
+             'imp_reemb_var33_hace3', 'imp_trasp_var17_out_hace3',
+             'imp_trasp_var17_out_ult1', 'imp_trasp_var33_out_hace3',
+             'num_var2_0_ult1', 'num_var2_ult1',
+             'num_var2_ult1', 'num_reemb_var13_hace3',
              'num_reemb_var33_hace3', 'num_trasp_var17_out_hace3',
              'num_trasp_var33_out_hace3', 'saldo_var2_ult1',
-             'saldo_medio_var13_medio_hace3',], axis=1, inplace=True)
+             'saldo_medio_var13_medio_hace3',
+             'imp_reemb_var33_ult1', 'num_reemb_var17_hace3',
+             'num_reemb_var33_ult1', 'num_trasp_var17_out_ult1',
+             'saldo_medio_var29_hace3'], axis=1, inplace=True)
 
     return df
 
@@ -64,17 +73,16 @@ def remove_highly_correlated_columns_man(df):
              'ind_var39', 'num_var26', 'num_var32', 'saldo_var29',
              'imp_amort_var18_ult1', 'delta_num_aport_var17_1y3',
              'delta_num_compra_var44_1y3', 'num_reemb_var13_ult1',
-             'delta_num_reemb_var33_1y3', 'num_reemb_var33_ult1',
-             'num_trasp_var17_in_ult1', 'num_trasp_var17_out_ult1',
+             'num_trasp_var17_in_ult1',
              'delta_num_trasp_var33_out_1y3', 'num_trasp_var33_out_ult1',
-             'num_reemb_var17_hace3', 'num_var7_emit_ult1', 'num_var6_0',
+             'num_var7_emit_ult1', 'num_var6_0',
              'ind_var29', 'num_var29', 'ind_var13_medio', 'num_var13_medio',
              'ind_var18', 'num_var18', 'num_var24', 'ind_var25', 'ind_var34',
              'num_var34', 'ind_var37', 'num_var44', 'num_var25', 'num_var37',
              'saldo_medio_var13_medio_ult1', 'delta_num_aport_var13_1y3',
              'delta_num_aport_var33_1y3', 'delta_num_reemb_var13_1y3',
-             'delta_num_reemb_var17_1y3', 'imp_reemb_var33_ult1',
-             'delta_num_trasp_var17_in_1y3', 'delta_num_trasp_var17_out_1y3',
+             'delta_num_reemb_var17_1y3',
+             'delta_num_trasp_var17_in_1y3',
              'delta_num_trasp_var33_in_1y3', 'imp_trasp_var33_out_ult1',
              'delta_num_venta_var44_1y3', 'num_trasp_var17_in_hace3',
              'num_op_var39_efect_ult3'], axis=1, inplace=True)
@@ -128,8 +136,10 @@ def var36_factor(df):
 
     #df1 = df[['ID', 'var36']]
     #df1.loc[df1['var36'] == 0, 'var36_0'] = 1
-    # d = pd.get_dummies(df['var36'])
-    # df = pd.concat([df, d], axis=1)
+    #d = pd.get_dummies(df['var36'])
+    #df = pd.concat([df, d], axis=1)
+
+    #df.drop(['var36'], axis=1, inplace=True)
 
     # print()
     # print('df1 counts')
@@ -139,10 +149,26 @@ def var36_factor(df):
     # print(d.columns)
     # print()
 
-    # df2 = pd.concat([df1, d], axis=1)
-    # df2.drop(['var36'], axis=1, inplace=True)
+    #df2 = pd.concat([df1, d], axis=1)
+    #df2.drop(['var36'], axis=1, inplace=True)
 
-    # return pd.merge(df, df2, on='ID', how='left')
+    #return pd.merge(df, df2, on='ID', how='left')
+    #df.loc[(df['var21'] <= 4500) & (df['var21'] > 0), 'var21_high'] = 1
+
+    # probability of 1 given var 36 == 99
+
+
+    return df
+
+
+def var_rel(df):
+
+    #df.loc[(df['var36'] == 2), 'var_36_15'] = df['var15'
+    df.loc[:, 'imp_op_var39'] =  \
+        ((df['imp_op_var40_comer_ult1'] == df['imp_op_var40_comer_ult3']) & \
+        (df['imp_op_var40_comer_ult3'] == df['imp_op_var40_ult1']) & \
+        (df['imp_op_var40_comer_ult1'] == df['imp_op_var40_ult1']) & \
+        (df['imp_op_var40_comer_ult1'] != 0)).astype(float)
     return df
 
 
@@ -163,8 +189,65 @@ def add_features(df):
     #train, test = remove_highly_correlated_columns(train, test)
     df = remove_highly_correlated_columns_man(df)
     #test = remove_highly_correlated_columns_man(test)
+    #df = var_rel(df)
 
     df = clean_data(df)
     #test = clean_data(test)
 
     return df
+
+
+def add_train_dependant_features(train, test):
+
+    # drop = [c for c in train.columns
+    #         if c.startswith('delta')]
+    # drop.append('ID')
+
+    # test_drop = list(drop)
+    # drop.append('TARGET')
+
+    # type_1 = train[train['TARGET'] == 1]
+    # type_1.drop(drop, axis=1, inplace=True)
+    # type_1.fillna(0, inplace=True)
+    # type_1_f = type_1.astype(float)
+
+    # type_1_n = maxabs_scale(type_1_f, axis=0)
+    # type_1_mu = np.mean(type_1_n, axis=0)
+
+    # mu_1 = np.reshape(type_1_mu, (1, -1))
+
+    # train_d = train.drop(drop, axis=1)
+    # test_d = test.drop(test_drop, axis=1)
+
+    # train_d.fillna(0, inplace=True)
+    # test_d.fillna(0, inplace=True)
+
+    # train_f = train_d.astype(float)
+    # test_f = test_d.astype(float)
+
+    # train_n = maxabs_scale(train_f, axis=0)
+    # test_n = maxabs_scale(test_f, axis=0)
+    train_d = train.drop(['ID', 'TARGET'], axis=1)
+    test_d = test.drop(['ID'], axis=1)
+
+    mu_1 = train_d[['TARGET'] == 1].mean()
+    mu_1 = np.reshape(mu_1.values, (1, -1))
+
+    train_1_sim = distance.cdist(train_d, mu_1, 'euclidean')
+    test_1_sim = distance.cdist(test_d, mu_1, 'euclidean')
+
+    train.loc[:, 'type_1_sim'] = train_1_sim
+    test.loc[:, 'type_1_sim'] = test_1_sim
+
+    return train, test
+
+
+def add_pobabilistic_features(train, test):
+
+    count_pos_99 = train.loc[train['TARGET'] == 1, 'var36'].value_counts()[99]
+    count_pos_total = train.loc[train['TARGET'] == 1, 'var36'].count()
+
+    count_1_total = train.shape[0]
+    count_99_total = train[train['var36'] == 99].shape[0]
+
+    pass
