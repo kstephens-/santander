@@ -5,6 +5,28 @@ from scipy.spatial import distance
 from sklearn.preprocessing import maxabs_scale
 
 
+def no_variation_features(train):
+
+    remove = []
+    for col in train.columns:
+        if train[col].std() == 0:
+            remove.append(col)
+
+    return remove
+
+
+def duplicate_features(train):
+
+    remove = []
+    c = train.columns
+    for i in range(len(c)-1):
+        v = train[c[i]].values
+        for j in range(i+1, len(c)):
+            if np.array_equal(v, train[c[j]].values):
+                remove.append(c[j])
+    return remove
+
+
 def remove_empty_columns(df):
 
     df.drop(['ind_var2_0', 'ind_var2', 'ind_var27_0', 'ind_var28_0',
@@ -118,15 +140,32 @@ def remove_non_distinct_columns(df):
 def var3_999999(df):
 
     df.loc[df['var3'] == -999999, 'var3_na'] = 1
-    df.loc[df['var3'] == -999999, 'var3'] = 0
+    df.loc[df['var3'] == -999999, 'var3'] = 2
 
-    # df.loc[df['var36'] == 99, 'var36_na'] = 1
+    # df.loc[:, 'saldo_medio_var5_hace3_var38_minus'] = \
+    #     df['var38'] - df['saldo_medio_var5_hace3']
+
+    # df.loc[:, 'saldo_medio_var5_hace3_var38'] = \
+    #     df['var38'] + df['saldo_medio_var5_hace3']
+
+    #df.loc[df['var38'] == 117310.979016, 'var38_default'] = 1
+
+    #df.replace(9999999999, 1.0)
+    #df.dropna(inplace=True)
+
+    #df.loc[df['var36'] == 99, 'var36_na'] = 1
     # df.loc[df['var36'] == 99, 'var36'] = 1
 
+    #df.loc[:, 'log_var15_var3'] = np.log1p(df['var15']) + np.log1p(df['var3'])
     df.loc[:, 'log_var15_var3'] = np.log(df['var15']) + np.log(df['var3'])
+    df.loc[df['log_var15_var3'] == float('-inf'), 'log_var15_var3'] = 0
 
-    df.loc[:, 'imp_op_var39_ult1_ult3'] = \
-        (df['imp_op_var39_comer_ult1'] == df['imp_op_var39_comer_ult3']).astype(float)
+    # df.loc[:, 'imp_op_var39_ult1_ult3'] = \
+    #     (df['imp_op_var39_comer_ult1'] == df['imp_op_var39_comer_ult3']).astype(float)
+
+    #df.loc[(df['num_meses_var5_ult3'] == 1) & (df['var36'] == 1), 'num_meses_var5_num_var36'] = 1
+    # df.loc[(df['num_meses_var5_ult3'] == 0) & (df['num_var45_ult3'] > 300),
+    #            'high_num_var45_ult3'] = 1
 
     # df.loc[:, 'ind_var1_a_0'] = \
     #     df['ind_var1'] - df['ind_var1_0']
@@ -185,23 +224,28 @@ def var_rel(df):
 def clean_data(df):
 
     df1 = var3_999999(df)
-    df2 = var36_factor(df)
+    #df2 = var36_factor(df)
     # df2.drop(['var36'], axis=1, inplace=True)
 
-    return df2
+    return df1
 
 
 def add_features(df):
 
-    df = remove_empty_columns(df)
+    #df = remove_empty_columns(df)
     #test = remove_empty_columns(test)
 
     #train, test = remove_highly_correlated_columns(train, test)
-    df = remove_highly_correlated_columns_man(df)
+    #df = remove_highly_correlated_columns_man(df)
     #test = remove_highly_correlated_columns_man(test)
     #df = var_rel(df)
 
+    #df = zero_count(df)
+    #df = add_default_feature_count(df)
     df = clean_data(df)
+    df = zero_count(df)
+
+    #df = add_default_feature_count(df)
     #test = clean_data(test)
 
     return df
@@ -261,3 +305,88 @@ def add_pobabilistic_features(train, test):
     count_99_total = train[train['var36'] == 99].shape[0]
 
     pass
+
+
+def add_default_feature_count(df):
+
+    df_mode = df[df.columns.difference(['ID', 'TARGET'])].mode(axis=0)
+    df_x = df.copy()
+
+    df.loc[:, 'default_feature_count'] = 0
+
+    for c in df_mode.columns:
+        df.loc[(df_x[c] == df_mode.loc[0, c]) & (df_x[c] != 0),
+               'default_feature_count'] += 1
+
+    return df
+
+
+def zero_count(df):
+
+    def z_count(x):
+        return np.sum(x == 0)
+
+    df.loc[:, 'zero_count'] = df[df.columns.difference(['ID', 'TARGET'])] \
+        .apply(z_count, axis=1)
+    return df
+
+
+# def add_default_feature_count(train, test):
+
+#     train_mode = train.mode(axis=0)
+#     train_x = train.copy()
+#     test_x = test.copy()
+
+#     train.loc[:, 'default_feature_count'] = 0
+#     test.loc[:, 'default_feature_count'] = 0
+
+#     for c in train_mode.columns:
+
+#         train.loc[(train_x[c] == train_mode.loc[0, c]) & (train_x[c] != 0),
+#                   'default_feature_count'] += 1
+#         test.loc[(test_x[c] == train_mode.loc[0, c]) & (test_x[c] != 0),
+#                  'default_feature_count'] += 1
+
+# #     print()
+# #     print('default feature count value counts')
+# #     print(train['default_feature_count'].value_counts())
+# #     print()
+
+#     return train, test
+
+def rare_category(x, category_distribution, cutoff=1, value='Rare'):
+    try:
+        if category_distribution[x] < cutoff:
+            return value
+    except (ValueError, KeyError):
+        return np.nan
+    else:
+        return x
+
+
+def var15_dummy(train, test):
+    train_var15 = train[['var15']]
+    test_var15 = test[['var15']]
+
+    train_var15.loc[:, 'train'] = True
+    test_var15.loc[:, 'train'] = False
+
+    train_distribution = train_var15['var15'].value_counts()
+
+    var15 = pd.concat([train_var15, test_var15])
+    var15.loc[:, 'var15'] = var15['var15'] \
+        .apply(rare_category, args=(train_distribution, ),
+               cutoff=5, value='RareVar15')
+
+    var15_bin = pd.get_dummies(var15['var15'])
+    var15_dummy = pd.concat([var15, var15_bin], axis=1)
+
+    msk = var15['train']
+    var15_dummy.drop(['train', 'var15', 'RareVar15'], axis=1, inplace=True)
+
+    train_var15s = pd.concat([train, var15_dummy[msk]], axis=1)
+    test_var15s = pd.concat([test, var15_dummy[~msk]], axis=1)
+
+    return train_var15s, test_var15s
+
+
