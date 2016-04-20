@@ -13,6 +13,33 @@ from sklearn.feature_selection import SelectPercentile, f_classif, chi2
 from sklearn.decomposition import PCA
 
 
+# imp_op_var40_comer_ult3 9.953338747949612e-06
+# num_var40_0   9.953338747949612e-06
+# ind_var13_corto_0   5.972003248769767e-06
+# num_var31   3.981335499179845e-06
+# num_var24_0   3.981335499179845e-06
+# ind_var8   3.981335499179845e-06
+# num_var12   1.9906677495899225e-06
+# num_var14   1.9906677495899225e-06
+# ind_var20_0   1.9906677495899225e-06
+# num_op_var40_ult3   1.9906677495899225e-06
+
+lowest_ranking_features = [
+    'ind_var12',
+    'num_var31_0',
+    'num_op_var40_comer_ult3',
+    'ind_var31',
+    'num_var31',
+    'num_var8',
+    'imp_var7_recib_ult1',
+    'ind_var24_0',
+    'ind_var24',
+    'num_var13_corto',
+    'ind_var31_0'
+]
+
+
+
 # lowest_ranking_features = [
 #     'ind_var9_ult1',                   # 9.448056357656174e-05
 #     'saldo_medio_var12_hace3',         # 9.448056357656174e-05
@@ -177,10 +204,16 @@ from sklearn.decomposition import PCA
 #           'var38',  # 0.1390357698289269
 #           'var15']  # 0.20964230171073095
 
+# lowest_ranking_features = [
+#     'num_var14', 'imp_op_var40_ult1', 'num_op_var40_ult1',
+#     'imp_var7_recib_ult1', 'ind_var31', 'num_var24'
+# ]
+
 
 train = pd.read_csv('../data/train.csv')
 test = pd.read_csv('../data/test.csv')
 
+# some additional features
 features = train.columns[1: -1]
 train.insert(1, 'SumZeros', (train[features] == 0).astype(int).sum(axis=1))
 test.insert(1, 'SumZeros', (test[features] == 0).astype(int).sum(axis=1))
@@ -193,6 +226,27 @@ test.insert(1, 'log_var15_var3', np.log(test['var15']) + np.log(test['var3']))
 test.loc[test['log_var15_var3'] == float('-inf'), 'log_var15_var3'] = 0
 test['log_var15_var3'].fillna(0.0, inplace=True)
 
+# train.insert(1, 'var3_default', (train['var3'] == -999999).astype(int))
+# test.insert(1, 'var3_default', (test['var3'] == -999999).astype(int))
+
+# train.loc[train['var3'] == -999999, 'var3'] = 2
+# test.loc[test['var3'] == -999999, 'var3'] = 2
+
+
+#train.insert(1, 'var15_var38_mult', np.sqrt(np.sqrt(train['var15']) + np.sqrt(train['var38'])))
+#test.insert(1, 'var15_var38_mult', np.sqrt(np.sqrt(test['var15']) + np.sqrt(test['var38'])))
+#train.insert(1, 'var15_var38', train['var38'] * train['var15'])
+#test.insert(1, 'var15_var38', test['var38'] * test['var15'])
+#train.insert(1, 'var38_saldo_var30', train['var38'] * train['saldo_var30'])
+#test.insert(1, 'var38_saldo_var30', test['var38'] * test['saldo_var30'])
+
+# train.insert(1, 'var38_saldo_var30', np.log1p(train['var38']) + np.log1p(train['saldo_var30']))
+# train['var38_saldo_var30'].fillna(0.0, inplace=True)
+# test.insert(1, 'var38_saldo_var30', np.log1p(test['var38']) + np.log1p(test['saldo_var30']))
+# test['var38_saldo_var30'].fillna(0.0, inplace=True)
+
+
+# remove some features
 remove_no_variation = fts.no_variation_features(train)
 train.drop(remove_no_variation, axis=1, inplace=True)
 test.drop(remove_no_variation, axis=1, inplace=True)
@@ -240,15 +294,23 @@ test.insert(1, 'PCASix', x_train_test_projected[train.shape[0]:, 5])
 # start dropping low randing features
 # features = train.columns[1:-1]
 # lowest_ranking_features =  list(set(features)-(set(tokeep)))
-# train.drop(lowest_ranking_features, axis=1, inplace=True)
-# test.drop(lowest_ranking_features, axis=1, inplace=True)
+#train.drop(lowest_ranking_features, axis=1, inplace=True)
+#test.drop(lowest_ranking_features, axis=1, inplace=True)
 
 
 features = train.columns[1: -1]
-folds = StratifiedKFold(train.TARGET.values,
+repeated_folds = []
+for seed in [42, 1039722, 487206]:
+    repeated_folds.append(
+        StratifiedKFold(train.TARGET.values,
                         n_folds=10,
                         shuffle=True,
-                        random_state=42)
+                        random_state=seed)
+    )
+# folds = StratifiedKFold(train.TARGET.values,
+#                         n_folds=10,
+#                         shuffle=True,
+#                         random_state=42)
 
 params = {}
 params['objective'] = 'binary:logistic'
@@ -259,7 +321,7 @@ params['max_depth'] = 5
 params['min_child_weight'] = 7
 params['max_delta_step'] = 0
 params['subsample'] = 0.8
-params['colsample_bytree'] = 0.5
+params['colsample_bytree'] = 0.7
 params['lambda'] = 1
 params['alpha'] = 0
 params['seed'] = 4242
@@ -281,66 +343,69 @@ train_test_scores = []
 
 submission = pd.DataFrame({'ID': test.ID.values})
 feature_importance = {}
-for index, (train_index, test_index) in enumerate(folds):
-    print()
-    print('Fold:', index)
+index = 0
+for folds in repeated_folds:
+    for ind, (train_index, test_index) in enumerate(folds):
+        print()
+        print('Fold:', index)
+        index += 1
 
-    train_train = train.iloc[train_index]
-    train_test = train.iloc[test_index]
+        train_train = train.iloc[train_index]
+        train_test = train.iloc[test_index]
 
-    print('train shape:', train_train.shape)
-    print('test shape:', train_test.shape)
+        print('train shape:', train_train.shape)
+        print('test shape:', train_test.shape)
 
-    dtrain_train = xgb.DMatrix(csr_matrix(train_train[features]),
-                               train_train.TARGET.values,
-                               silent=True)
-    dtrain_test = xgb.DMatrix(csr_matrix(train_test[features]),
-                              train_test.TARGET.values,
-                              silent=True)
+        dtrain_train = xgb.DMatrix(csr_matrix(train_train[features]),
+                                   train_train.TARGET.values,
+                                   silent=True)
+        dtrain_test = xgb.DMatrix(csr_matrix(train_test[features]),
+                                  train_test.TARGET.values,
+                                  silent=True)
 
-    watchlist = [(dtrain_train, 'train'), (dtrain_test, 'test')]
-    model = xgb.train(params, dtrain_train, num_rounds,
-                      evals=watchlist, early_stopping_rounds=100,
-                      verbose_eval=False)
+        watchlist = [(dtrain_train, 'train'), (dtrain_test, 'test')]
+        model = xgb.train(params, dtrain_train, num_rounds,
+                          evals=watchlist, early_stopping_rounds=125,
+                          verbose_eval=False)
 
-    train_train_pred = model.predict(dtrain_train, ntree_limit=model.best_iteration)
-    train_test_pred = model.predict(dtrain_test, ntree_limit=model.best_iteration)
-    train_score = roc_auc_score(train_train.TARGET.values,
-                                train_train_pred,
-                                average='weighted')
-    test_score =  roc_auc_score(train_test.TARGET.values,
-                                train_test_pred,
-                                average='weighted')
+        train_train_pred = model.predict(dtrain_train, ntree_limit=model.best_iteration)
+        train_test_pred = model.predict(dtrain_test, ntree_limit=model.best_iteration)
+        train_score = roc_auc_score(train_train.TARGET.values,
+                                    train_train_pred,
+                                    average='weighted')
+        test_score =  roc_auc_score(train_test.TARGET.values,
+                                    train_test_pred,
+                                    average='weighted')
 
-    dtest = xgb.DMatrix(csr_matrix(test[features]),
-                        silent=True)
-    test_pred = model.predict(dtest, ntree_limit=model.best_iteration)
-    submission.loc[:, 'm_{}'.format(index)] = test_pred
+        dtest = xgb.DMatrix(csr_matrix(test[features]),
+                            silent=True)
+        test_pred = model.predict(dtest, ntree_limit=model.best_iteration)
+        submission.loc[:, 'm_{}'.format(index)] = test_pred
 
-    print('train score:', train_score)
-    train_train_scores.append(train_score)
-    print('test score:', test_score)
-    train_test_scores.append(test_score)
+        print('train score:', train_score)
+        train_train_scores.append(train_score)
+        print('test score:', test_score)
+        train_test_scores.append(test_score)
 
-    # feature importance
-    cols = train[features].columns
-    feature_imp = model.get_fscore()
-    for f in feature_imp:
-        try:
-            feature_importance[cols[int(f.strip('f'))]] += feature_imp[f]
-        except KeyError:
-            feature_importance[cols[int(f.strip('f'))]] = feature_imp[f]
+        # feature importance
+        cols = train[features].columns
+        feature_imp = model.get_fscore()
+        for f in feature_imp:
+            try:
+                feature_importance[cols[int(f.strip('f'))]] += feature_imp[f]
+            except KeyError:
+                feature_importance[cols[int(f.strip('f'))]] = feature_imp[f]
 
 print()
-print('Avg train score:', np.power(np.prod(train_train_scores), 1/10))
-print('Avg test score:', np.power(np.prod(train_test_scores), 1/10))
+print('Avg train score:', np.power(np.prod(train_train_scores), 1/index))
+print('Avg test score:', np.power(np.prod(train_test_scores), 1/index))
 print('Test std:', np.std(train_test_scores))
 print()
 
-version = '3.01'
+version = '3.04'
 #sub = submission[submission.columns.difference(['ID'])].mean(axis=1)
 sub = submission[submission.columns.difference(['ID'])].prod(axis=1)
-preds = np.power(sub, 1/10)
+preds = np.power(sub, 1/index)
 final_submission = pd.DataFrame({'ID': test.ID.values,
                                  'TARGET': preds})
 final_submission.to_csv('../submissions/{}_v{}.csv'.format('xgb', version),
