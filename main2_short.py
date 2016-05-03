@@ -3,6 +3,7 @@ import numpy as np
 import xgboost as xgb
 import operator
 import pickle
+import re
 
 import features as fts
 
@@ -13,6 +14,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.preprocessing import Imputer, Binarizer, scale, normalize, minmax_scale
 from sklearn.feature_selection import SelectPercentile, f_classif, chi2
 from sklearn.decomposition import PCA, FactorAnalysis, FastICA, LatentDirichletAllocation
+from sklearn.svm import OneClassSVM
 
 from unbalanced_dataset import TomekLinks
 
@@ -373,6 +375,35 @@ test.insert(1, 'log_var15_var3', np.log(test['var15']) + np.log(test['var3']))
 test.loc[test['log_var15_var3'] == float('-inf'), 'log_var15_var3'] = 0
 test['log_var15_var3'].fillna(0.0, inplace=True)
 
+# train.insert(1, 'saldo_sub_mean',
+#     train[['saldo_var5', 'saldo_var8', 'saldo_var6', 'saldo_var20', 'saldo_var14', 'saldo_var13']].mean(axis=1))
+# test.insert(1, 'saldo_sub_mean',
+#     test[['saldo_var5', 'saldo_var8', 'saldo_var6', 'saldo_var20', 'saldo_var14', 'saldo_var13']].mean(axis=1))
+
+#num_sum_tr = train[[c for c in train.columns if re.match(r'^num_var\d+$', c)]].sum(axis=1)
+#num_sum_te = test[[c for c in test.columns if re.match(r'^num_var\d+$', c)]].sum(axis=1)
+
+#train.insert(1, 'ind_sum', train[[c for c in train.columns if re.match(r'^ind_var\d+$', c)]].sum(axis=1))
+#test.insert(1, 'ind_sum', test[[c for c in test.columns if re.match(r'^ind_var\d+$', c)]].sum(axis=1))
+
+#train.insert(1, 'ind_num_sum', num_sum_tr * ind_sum_tr)
+#test.insert(1, 'ind_num_sum', num_sum_te * ind_sum_te)
+
+# train.update(
+#     train[[c for c in train.columns if re.match(r'^num_var\d+(_0)?$', c)]]
+#     .applymap(lambda x: x / 3)
+# )
+# test.update(
+#     test[[c for c in test.columns if re.match(r'^num_var\d+(_0)?$', c)]]
+#     .applymap(lambda x: x / 3)
+# )
+
+# train.insert(1, 'var3_na', (train['var3'] == -999999).astype(int))
+# test.insert(1, 'var3_na', (test['var3'] == -999999).astype(int))
+
+# train = train.replace(-999999, 2)
+# test = test.replace(-999999, 2)
+
 # train.insert(1, 'log_saldo_var30_log_saldo_medio_var5_ult3',
 #              train['saldo_var30'].apply(my_log) - train['saldo_medio_var5_hace3'].apply(my_log))
 # test.insert(1, 'log_saldo_var30_log_saldo_medio_var5_ult3',
@@ -438,6 +469,21 @@ train['TARGET'] = y
 test['logvar38'] = test.loc[~test_msk, 'var38'].map(np.log)
 test.loc[test_msk, 'logvar38'] = 0
 
+main_saldos = ['saldo_var30', 'saldo_var31', 'saldo_var26', 'saldo_var1', 'saldo_var37']
+# train.insert(1, 'logvar38_v_saldo', (train[main_saldos] == 0).sum(axis=1) * train['logvar38'])
+# test.insert(1, 'logvar38_v_saldo', (test[main_saldos] == 0).sum(axis=1) * test['logvar38'])
+
+#train.insert(1, 'log_v_saldo', train[main_saldos].sum(axis=1).apply(lambda x: np.log(x) if x > 0 else 0) + train['logvar38'])
+#test.insert(1, 'log_v_saldo', test[main_saldos].sum(axis=1).apply(lambda x: np.log(x) if x > 0 else 0) + train['logvar38'])
+
+#train.insert(1, 'logvar38_deviation', train['logvar38'] - np.mean(train['logvar38']))
+#test.insert(1, 'logvar38_deviation', test['logvar38'] - np.mean(test['logvar38']))
+
+# train.insert(1, 'logvar38_log_saldo_var30',
+#     train['logvar38'] + train['saldo_var30'].apply(lambda x: np.log(x) if x > 0 else 0))
+# test.insert(1, 'logvar38_log_saldo_var30',
+#     test['logvar38'] + test['saldo_var30'].apply(lambda x: np.log(x) if x > 0 else 0))
+
 #train.insert(1, 'log_var38_log_var15_var3', train['logvar38'] + train['log_var15_var3'])
 #test.insert(1, 'log_var38_log_var15_var3', test['logvar38'] + train['log_var15_var3'])
 
@@ -459,6 +505,29 @@ test.loc[test_msk, 'logvar38'] = 0
 # train['var38_saldo_var30'].fillna(0.0, inplace=True)
 # test.insert(1, 'var38_saldo_var30', np.log1p(test['var38']) + np.log1p(test['saldo_var30']))
 # test['var38_saldo_var30'].fillna(0.0, inplace=True)
+has_9999999999 = [
+    'delta_imp_amort_var18_1y3',
+    'delta_imp_amort_var34_1y3',
+    'delta_imp_aport_var13_1y3',
+    'delta_imp_aport_var17_1y3',
+    'delta_imp_aport_var33_1y3',
+    'delta_imp_compra_var44_1y3',
+    'delta_imp_reemb_var13_1y3',
+    'delta_imp_reemb_var17_1y3',
+    'delta_imp_trasp_var17_in_1y3',
+    'delta_imp_trasp_var33_in_1y3',
+    'delta_imp_trasp_var33_out_1y3',
+    'delta_imp_venta_var44_1y3',
+    'delta_num_aport_var13_1y3',
+    'delta_num_aport_var17_1y3',
+    'delta_num_aport_var33_1y3',
+    'delta_num_compra_var44_1y3',
+    'delta_num_venta_var44_1y3'
+]
+#train.update(train[has_9999999999].applymap(lambda x: 1 if x == 9999999999 else 0))
+#test.update(test[has_9999999999].applymap(lambda x: 1 if x == 9999999999 else 0))
+
+
 no_test_variance = [
     'delta_imp_reemb_var33_1y3',
     'delta_imp_trasp_var17_out_1y3',
@@ -488,8 +557,27 @@ remove_duplicated = fts.duplicate_features(train)
 train.drop(remove_duplicated, axis=1, inplace=True)
 test.drop(remove_duplicated, axis=1, inplace=True)
 
+#train.insert(1, 'var18', train['imp_amort_var18_ult1'] + train['saldo_var18'])
+#test.insert(1, 'var18', test['imp_amort_var18_ult1'] + test['saldo_var18'])
+
 #train.drop(lowest_ranking_features, axis=1, inplace=True)
 #test.drop(lowest_ranking_features, axis=1, inplace=True)
+# train.drop(['var38', 'ind_var18_0', 'num_var18_0',
+#             'saldo_var18', 'delta_imp_amort_var18_1y3',
+#             'imp_amort_var18_ult1'], axis=1, inplace=True)
+# test.drop(['var38', 'ind_var18_0', 'num_var18_0',
+#             'saldo_var18', 'delta_imp_amort_var18_1y3',
+#             'imp_amort_var18_ult1'], axis=1, inplace=True)
+# train.insert(1, 'delta_imp_amort',
+#     ((train['delta_imp_amort_var18_1y3'] == 9999999999) | (train['delta_imp_amort_var34_1y3'] == 9999999999)).astype(int))
+# test.insert(1, 'delta_imp_amort',
+#     ((test['delta_imp_amort_var18_1y3'] == 9999999999) | (test['delta_imp_amort_var34_1y3'] == 9999999999)).astype(int))
+
+
+# train.drop(['var38', 'delta_imp_amort_var18_1y3',
+#             'delta_imp_amort_var34_1y3'], axis=1, inplace=True)
+# test.drop(['var38', 'delta_imp_amort_var18_1y3',
+#             'delta_imp_amort_var34_1y3'], axis=1, inplace=True)
 train.drop(['var38'], axis=1, inplace=True)
 test.drop(['var38'], axis=1, inplace=True)
 
@@ -524,6 +612,42 @@ def num_var45_smoothed_prob(x, dist, count):
 # test.insert(1, 'num_var30_num_var30_0_3',
 #     ((test['num_var30_0'] == 3) & (test['num_var30'] == 0)).astype(int))
 
+#train.insert(1, 'var15_less', (train['var15'] < 23).astype(int))
+#test.insert(1, 'var15_less', (test['var15'] < 23).astype(int))
+
+# train.insert(1, 'num_var_sum',
+#     train[[c for c in train.columns if re.match(r'num_var\d+$', c)]].sum(axis=1))
+# test.insert(1, 'num_var_sum',
+#     test[[c for c in test.columns if re.match(r'num_var\d+$', c)]].sum(axis=1))
+
+# var 10
+#train.insert(1, 'ind_var10_ult', train['ind_var10_ult1'] - train['ind_var10cte_ult1'])
+#test.insert(1, 'ind_var10_ult', test['ind_var10_ult1'] - test['ind_var10cte_ult1'])
+
+
+# var 16
+# train.insert(1, 'imp_var16', train['imp_ent_var16_ult1'] - train['imp_sal_var16_ult1'])
+# test.insert(1, 'imp_var16', test['imp_ent_var16_ult1'] - test['imp_sal_var16_ult1'])
+
+# train.insert(1, 'imp_var16_comp',
+#     (train['imp_ent_var16_ult1'] * train['num_ent_var16_ult1']) -
+#     (train['imp_sal_var16_ult1'] * train['num_sal_var16_ult1'])
+# )
+# test.insert(1, 'imp_var16_comp',
+#     (test['imp_ent_var16_ult1'] * test['num_ent_var16_ult1']) -
+#     (test['imp_sal_var16_ult1'] * test['num_sal_var16_ult1'])
+# )
+
+
+#var 15 features
+# train.insert(1, 'var15_1', train['var15'].map(lambda x: x if x < 23 else 23))
+# train.insert(1, 'var15_2', train['var15'].map(lambda x: x if x < 28 else 28).map(lambda x: x if x < 23 else 23))
+# train.insert(1, 'var15_3', train['var15'].map(lambda x: x if x > 40 else 40))
+
+# test.insert(1, 'var15_1', test['var15'].map(lambda x: x if x < 23 else 23))
+# test.insert(1, 'var15_2', test['var15'].map(lambda x: x if x < 28 else 28).map(lambda x: x if x < 23 else 23))
+# test.insert(1, 'var15_3', test['var15'].map(lambda x: x if x > 40 else 40))
+
 
 # var 30 features
 train.insert(1, 'num_var30_num_var30_0_6',
@@ -534,6 +658,9 @@ test.insert(1, 'num_var30_num_var30_0_6',
 train.insert(1, 'num_var30_sum', train['num_var30_0'] + train['num_var30'])
 test.insert(1, 'num_var30_sum', test['num_var30_0'] + test['num_var30'])
 
+# train.insert(1, 'num_var30_minus', train['num_var30_0'] - train['num_var30'])
+# test.insert(1, 'num_var30_minus', test['num_var30_0'] - test['num_var30'])
+
 # train.insert(1, 'ind_var30_sum', train['ind_var30_0'] + train['ind_var30'])
 # test.insert(1, 'ind_var30_sum', test['ind_var30_0'] + test['ind_var30'])
 
@@ -543,22 +670,181 @@ test.insert(1, 'num_var30_ind_var30',
     (test['num_var30_0'] + test['num_var30']) * (test['ind_var30'] + test['ind_var30_0']))
 
 
+#train.drop(['num_var30_0', 'num_var30'], axis=1, inplace=True)
+#test.drop(['num_var30_0', 'num_var30'], axis=1, inplace=True)
+
+# # unhappy_mean = np.mean(train.loc[train['TARGET'] == 1, 'saldo_var30'])
+# # train.insert(1, 'saldo_var30_deviation', train['saldo_var30'] - unhappy_mean)
+# # test.insert(1, 'saldo_var30_deviation', test['saldo_var30'] - unhappy_mean)
+
+
+# # var 31 features
+# #train.insert(1, 'num_var31_sum', train['num_var31'] + train['num_var31_0'])
+# #test.insert(1, 'num_var31_sum', train['num_var31'] + train['num_var31_0'])
+
+# var 36
+# train.insert(1, 'var36_var3',
+#     ((train['var36'] == 99) & (train['var3'] == -999999)).astype(int))
+# test.insert(1, 'var36_var3',
+#     ((test['var36'] == 99) & (test['var3'] == -999999)).astype(int))
+
+
+# # var 42 features
+#train.insert(1, 'num_var42_minus', train['num_var42'] - train['num_var42_0'])
+#test.insert(1, 'num_var42_minus', test['num_var42'] - test['num_var42_0'])
+
+# train.drop(['num_var42', 'num_var42_0'], axis=1, inplace=True)
+# test.drop(['num_var42', 'num_var42_0'], axis=1, inplace=True)
+
+#train.insert(1, 'var42', (train['num_var42_0'] * train['num_var42']))
+#test.insert(1, 'var42', (test['num_var42_0'] * test['num_var42']))
+
+# train.insert(1, 'log_saldo_var42', np.log1p(train['saldo_var42']))
+# test.insert(1, 'log_saldo_var42', np.log1p(test['saldo_var42']))
+
+# train.drop(['saldo_var42'], axis=1, inplace=True)
+# test.drop(['saldo_var42'], axis=1, inplace=True)
+
+
+#train.drop(['saldo_var5', 'saldo_var6', 'saldo_var20', 'saldo_var24', 'saldo_var14', 'saldo_var13'], axis=1, inplace=True)
+#test.drop(['saldo_var5', 'saldo_var6', 'saldo_var20', 'saldo_var24', 'saldo_var14', 'saldo_var13'], axis=1, inplace=True)
+
+#train.insert(1, 'sum_saldo', (train[['saldo_var30', 'saldo_var31', 'saldo_var26', 'saldo_var1']] == 0).sum(axis=1))
+#train.insert(1, 'mean_saldo', train[['saldo_var30', 'saldo_var31', 'saldo_var26', 'saldo_var1']].mean(axis=1))
+#train.insert(1, 'min_saldo', train[['saldo_var30', 'saldo_var31', 'saldo_var26', 'saldo_var1']].min(axis=1))
+#train.insert(1, 'max_saldo', train[['saldo_var30', 'saldo_var31', 'saldo_var26', 'saldo_var1']].max(axis=1))
+
+#test.insert(1, 'sum_saldo', (test[['saldo_var30', 'saldo_var31', 'saldo_var26', 'saldo_var1']] == 0).sum(axis=1))
+#test.insert(1, 'mean_saldo', test[['saldo_var30', 'saldo_var31', 'saldo_var26', 'saldo_var1']].mean(axis=1))
+#test.insert(1, 'min_saldo', test[['saldo_var30', 'saldo_var31', 'saldo_var26', 'saldo_var1']].min(axis=1))
+#test.insert(1, 'max_saldo', test[['saldo_var30', 'saldo_var31', 'saldo_var26', 'saldo_var1']].max(axis=1))
+
+# train.insert(1, 'saldo_var30_quant', pd.qcut(train['saldo_var30'], [0, 0.25, 0.75, 0.9, 1.0], labels=False))
+# test.insert(1, 'saldo_var30_quant', pd.qcut(test['saldo_var30'], [0, 0.25, 0.75, 0.9, 1.0], labels=False))
+
+# train.drop(['saldo_var30'], axis=1, inplace=True)
+# test.drop(['saldo_var30'], axis=1, inplace=True)
+
+
+# train.insert(1, 'num_var30_ind_var30_minus',
+#     (train['num_var30'] - train['num_var30_0']) * (train['ind_var30'] - train['ind_var30_0']))
+# test.insert(1, 'num_var30_ind_var30_minus',
+#     (test['num_var30'] - test['num_var30_0']) * (test['ind_var30'] - test['ind_var30_0']))
+
+
+# saldo
+# saldo_var_sum_tr = \
+#     train[[c for c in train.columns if re.match(r'saldo_var\d+$', c)]].sum(axis=1)
+# saldo_var_sum_te = \
+#     test[[c for c in test.columns if re.match(r'saldo_var\d+$', c)]].sum(axis=1)
+
+# train.insert(1, 'saldo_var_sum', saldo_var_sum_tr)
+# test.insert(1, 'saldo_var_sum', saldo_var_sum_te)
+
+# train.insert(1, 'neg_saldo_var_sum', saldo_var_sum_tr
+#     .apply(lambda x: x if x < 0 else 0))
+# test.insert(1, 'neg_saldo_var_sum', saldo_var_sum_te
+#     .apply(lambda x: x if x < 0 else 0))
+
+# train.insert(1, 'log_saldo_var_sum', saldo_var_sum_tr.apply(lambda x: np.log1p(np.abs(x))))
+# test.insert(1, 'log_saldo_var_sum', saldo_var_sum_te.apply(lambda x: np.log1p(np.abs(x))))
+
+
 # var 5 fetures
+# train.insert(1, 'var5_minus',
+#     train['num_var5_0'] - train['num_var5'] - train['num_meses_var5_ult3'])
+# test.insert(1, 'var5_minus',
+#     test['num_var5_0'] - test['num_var5'] - test['num_meses_var5_ult3'])
+
+#train.insert(1, 'num_var5_num_meses_var5', (train['num_var5'] + train['num_var5_0']) * train['num_meses_var5_ult3'])
+#test.insert(1, 'num_var5_num_meses_var5', (test['num_var5'] + test['num_var5_0']) * test['num_meses_var5_ult3'])
+
+#train.insert(1, 'saldo_medio_var5_ult', train['saldo_medio_var5_ult3'] - train['saldo_medio_var5_ult1'])
+#test.insert(1, 'saldo_medio_var5_ult', test['saldo_medio_var5_ult3'] - test['saldo_medio_var5_ult1'])
+# train.insert(1, 'saldo_medio_var5_hace2_less', (train['saldo_medio_var5_hace2'] > 160000).astype(int))
+# test.insert(1, 'saldo_medio_var5_hace2_less', (test['saldo_medio_var5_hace2'] > 160000).astype(int))
+
+# train.insert(1, 'log_saldo_medio_var5_hace',
+#     (train['saldo_medio_var5_hace3'] + train['saldo_medio_var5_hace2'])
+#     .apply(lambda x: np.log(x) if x > 0 else 0))
+# test.insert(1, 'log_saldo_medio_var5_hace',
+#     (test['saldo_medio_var5_hace3'] + test['saldo_medio_var5_hace2'])
+#     .apply(lambda x: np.log(x) if x > 0 else 0))
+
+# train.insert(1, 'saldo_var5_minus',
+#     train['saldo_var5'] - train['saldo_medio_var5_hace3'] - train['saldo_medio_var5_hace2'])
+# test.insert(1, 'saldo_var5_minus',
+#     test['saldo_var5'] - test['saldo_medio_var5_hace3'] - test['saldo_medio_var5_hace2'])
+
+# train.insert(1, 'num_var5_saldo_var5', (train['num_var5_0'] + train['num_var5']) * train['saldo_var5'])
+# test.insert(1, 'num_var5_saldo_var5', (test['num_var5_0'] + test['num_var5']) * test['saldo_var5'])
+
 #train.insert(1, 'num_var5_sum', train['num_var5_0'] + train['num_var5'])
 #test.insert(1, 'num_var5_sum', test['num_var5_0'] + test['num_var5'])
 
-train.insert(1, 'num_var5_minus', train['num_var5'] - train['num_var5_0'])
-test.insert(1, 'num_var5_minus', test['num_var5'] - test['num_var5_0'])
+# train.insert(1, 'num_var5_times', train['num_var5'] - train['num_var5_0'])
+# test.insert(1, 'num_var5_times', test['num_var5'] - test['num_var5_0'])
 
-train.insert(1, 'num_var5_ind_var5',
-    (train['num_var5'] + train['num_var5_0']) * (train['ind_var5'] + train['ind_var5_0']))
-test.insert(1, 'num_var5_ind_var5',
-    (test['num_var5'] + test['num_var5_0']) * (test['ind_var5'] + test['ind_var5_0']))
+# train.insert(1, 'num_var5_ind_var5',
+#     (train['num_var5'] + train['num_var5_0']) * (train['ind_var5'] + train['ind_var5_0']))
+# test.insert(1, 'num_var5_ind_var5',
+#     (test['num_var5'] + test['num_var5_0']) * (test['ind_var5'] + test['ind_var5_0']))
 
-train.insert(1, 'num_var5_ind_var5_minus',
-    (train['num_var5'] - train['num_var5_0']) * (train['ind_var5'] + train['ind_var5_0']))
-test.insert(1, 'num_var5_ind_var5_minus',
-    (test['num_var5'] - test['num_var5_0']) * (test['ind_var5'] + test['ind_var5_0']))
+# train.insert(1, 'num_var5_ind_var5_minus',
+#     (train['num_var5'] - train['num_var5_0']) * (train['ind_var5'] - train['ind_var5_0']))
+# test.insert(1, 'num_var5_ind_var5_minus',
+#     (test['num_var5'] - test['num_var5_0']) * (test['ind_var5'] - test['ind_var5_0']))
+# train.insert(1, 'saldo_var5_quant', pd.qcut(train['saldo_var5'], [0, 0.40, 0.85, 0.95, 1.0], labels=False))
+# test.insert(1, 'saldo_var5_quant', pd.qcut(test['saldo_var5'], [0, 0.40, 0.85, 0.95, 1.0], labels=False))
+
+# train.insert(1, 'saldo_medio_var5_hace',
+#     pd.qcut(train['saldo_medio_var5_hace3'] - train['saldo_medio_var5_hace2'], 5, labels=False))
+# test.insert(1, 'saldo_medio_var5_hace',
+#     pd.qcut(test['saldo_medio_var5_hace3'] - test['saldo_medio_var5_hace2'], 5, labels=False))
+
+
+# var 22 features
+# train.insert(1, 'num_var22_hace',
+#     (train['num_var22_hace3'] + train['num_var22_hace2']) - train['num_var22_ult3'])
+# test.insert(1, 'num_var22_hace',
+#     (test['num_var22_hace3'] + test['num_var22_hace2']) - test['num_var22_ult3'])
+# train.insert(1, 'num_var22_med_ult1',
+#     (train['num_med_var22_ult3'] - train['num_var22_ult3']) * (train['num_med_var22_ult3'] - train['num_var22_ult1']))
+# test.insert(1, 'num_var22_med_ult1',
+#     (test['num_med_var22_ult3'] - test['num_var22_ult3']) * (test['num_med_var22_ult3'] - test['num_var22_ult1']))
+
+#train.insert(1, 'num_var22_med_ult3', train['num_med_var22_ult3'] - train['num_var22_ult3'])
+#test.insert(1, 'num_var22_med_ult3', test['num_med_var22_ult3'] - test['num_var22_ult3'])
+
+#num_var22_hace_minus_tr = train['num_var22_hace3'] - train['num_var22_hace2']
+#num_var22_hace_minus_te = test['num_var22_hace3'] - test['num_var22_hace2']
+
+# train.insert(1, 'num_var22_hace_ult',
+#     (train['num_var22_hace3'] + train['num_var22_ult3']) * (train['num_var22_hace2'] + train['num_var22_ult1']))
+# test.insert(1, 'num_var22_hace_ult',
+#     (test['num_var22_hace3'] + test['num_var22_ult3']) * (test['num_var22_hace2'] + test['num_var22_ult1']))
+
+# train.insert(1, 'num_var22_hace_minus_range',
+#     ((num_var22_hace_minus_tr >= 25) | (num_var22_hace_minus_tr <= -30)).astype(int))
+# test.insert(1, 'num_var22_hace_minus_range',
+#     ((num_var22_hace_minus_tr >= 25) | (num_var22_hace_minus_tr <= -30)).astype(int))
+
+
+# var 45 features
+# train.insert(1, 'num_var45_hace2_ult3',
+#     ((train['num_var45_hace2'] >= 100) & (train['num_var45_ult3'] >= 100)).astype(int))
+# test.insert(1, 'num_var45_hace2_ult3',
+#     ((test['num_var45_hace2'] >= 100) & (test['num_var45_ult3'] >= 100)).astype(int))
+
+# train.insert(1, 'num_var45_hace', (train['num_var45_hace2']/3) * train['num_var45_hace3'])
+# test.insert(1, 'num_var45_hace', (test['num_var45_hace2']/3) * test['num_var45_hace3'])
+
+#train.insert(1, 'num_var45_ult', train['num_med_var45_ult3'] - train['num_var45_ult3'])
+#test.insert(1, 'num_var45_ult', test['num_med_var45_ult3'] - test['num_var45_ult3'])
+# train.insert(1, 'saldo_medio_var5_ult_quant',
+#     pd.qcut((train['saldo_medio_var5_ult1'] + train['saldo_medio_var5_ult3']), 5, labels=False))
+# test.insert(1, 'saldo_medio_var5_ult_quant',
+#     pd.qcut((test['saldo_medio_var5_ult1'] + test['saldo_medio_var5_ult3']), 5, labels=False))
 
 
 # train.insert(1, 'num_var30_ind_var30_saldo_var30',
@@ -620,6 +906,75 @@ test.insert(1, 'num_var5_ind_var5_minus',
 # train.drop(['TARGET', 'RareVar45'], axis=1, inplace=True)
 # train['TARGET'] = y
 
+train['delta_imp_aport_var13_1y3'] = train['delta_imp_aport_var13_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+test['delta_imp_aport_var13_1y3'] = test['delta_imp_aport_var13_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+train['delta_num_aport_var13_1y3'] = train['delta_num_aport_var13_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+test['delta_num_aport_var13_1y3'] = test['delta_num_aport_var13_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+train['delta_imp_reemb_var13_1y3'] = train['delta_imp_reemb_var13_1y3'] \
+    .apply(lambda x: 1 if x == 9999999999 else x)
+test['delta_imp_reemb_var13_1y3'] = test['delta_imp_reemb_var13_1y3'] \
+    .apply(lambda x: 1 if x == 9999999999 else x)
+
+train['delta_imp_aport_var17_1y3'] = train['delta_imp_aport_var17_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+test['delta_imp_aport_var17_1y3'] = test['delta_imp_aport_var17_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+train['delta_num_aport_var17_1y3'] = train['delta_num_aport_var17_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+test['delta_num_aport_var17_1y3'] = test['delta_num_aport_var17_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+train['delta_imp_reemb_var17_1y3'] = train['delta_imp_reemb_var17_1y3'] \
+    .apply(lambda x: 1 if x == 9999999999 or x == -1 else x)
+test['delta_imp_reemb_var17_1y3'] = test['delta_imp_reemb_var17_1y3'] \
+    .apply(lambda x: 1 if x == 9999999999 or x == -1 else x)
+train['delta_imp_trasp_var17_in_1y3'] = train['delta_imp_trasp_var17_in_1y3'] \
+    .apply(lambda x: 1 if x == 9999999999 or x == -1 else x)
+test['delta_imp_trasp_var17_in_1y3'] = test['delta_imp_trasp_var17_in_1y3'] \
+    .apply(lambda x: 1 if x == 9999999999 or x == -1 else x)
+
+train['delta_imp_aport_var33_1y3'] = train['delta_imp_aport_var33_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+test['delta_imp_aport_var33_1y3'] = test['delta_imp_aport_var33_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+train['delta_num_aport_var33_1y3'] = train['delta_num_aport_var33_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+test['delta_num_aport_var33_1y3'] = test['delta_num_aport_var33_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+train['delta_imp_trasp_var33_in_1y3'] = train['delta_imp_trasp_var33_in_1y3'] \
+    .apply(lambda x: 1 if x == 9999999999 or x == -1 else x)
+test['delta_imp_trasp_var33_in_1y3'] = test['delta_imp_trasp_var33_in_1y3'] \
+    .apply(lambda x: 1 if x == 9999999999 or x == -1 else x)
+train['delta_imp_trasp_var33_out_1y3'] = train['delta_imp_trasp_var33_out_1y3'] \
+    .apply(lambda x: 1 if x == 9999999999 or x == -1 else x)
+test['delta_imp_trasp_var33_in_1y3'] = test['delta_imp_trasp_var33_out_1y3'] \
+    .apply(lambda x: 1 if x == 9999999999 or x == -1 else x)
+
+train['delta_imp_compra_var44_1y3'] = train['delta_imp_compra_var44_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+test['delta_imp_compra_var44_1y3'] = test['delta_imp_compra_var44_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+train['delta_num_compra_var44_1y3'] = train['delta_num_compra_var44_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+test['delta_num_compra_var44_1y3'] = test['delta_num_compra_var44_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+train['delta_imp_venta_var44_1y3'] = train['delta_imp_venta_var44_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+test['delta_imp_venta_var44_1y3'] = test['delta_imp_venta_var44_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+train['delta_num_venta_var44_1y3'] = train['delta_num_venta_var44_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+test['delta_num_venta_var44_1y3'] = test['delta_num_venta_var44_1y3'] \
+    .apply(lambda x: 0 if x == 9999999999 else x)
+
+
+
+#train.drop(['delta_imp_amort_var18_1y3', 'delta_imp_amort_var34_1y3'], axis=1, inplace=True)
+#test.drop(['delta_imp_amort_var18_1y3', 'delta_imp_amort_var34_1y3'], axis=1, inplace=True)
+
 
 normalized_train_test = normalize(combined_train_test[features], axis=0)
 
@@ -655,6 +1010,65 @@ test.insert(1, 'PCASix', x_train_test_projected[train.shape[0]:, 5])
 #test.insert(1, 'PCAEleven', x_test_projected[:, 10])
 #test.insert(1, 'PCATwelve', x_test_projected[:, 11])
 
+# svm1 = OneClassSVM(nu=0.5, random_state=1234)
+# svm2 = OneClassSVM(nu=0.3, random_state=4321)
+# svm3 = OneClassSVM(nu=0.15, random_state=7)
+# svm4 = OneClassSVM(nu=0.1, random_state=42)
+# svm5 = OneClassSVM(nu=0.15, random_state=262)
+# svm6 = OneClassSVM(nu=0.2, random_state=1414)
+
+# samp1_neg = train[train['TARGET'] == 0].sample(frac=0.1, random_state=2, axis=0).index
+# samp1_pos = train[train['TARGET'] == 1].sample(frac=0.1, random_state=2, axis=0).index
+# samp1 = samp1_neg.append(samp1_pos)
+
+# samp2_neg = train[train['TARGET'] == 0].sample(frac=0.1, random_state=14, axis=0).index
+# samp2_pos = train[train['TARGET'] == 1].sample(frac=0.1, random_state=14, axis=0).index
+# samp2 = samp2_neg.append(samp2_pos)
+
+# samp3_neg = train[train['TARGET'] == 0].sample(frac=0.1, random_state=337, axis=0).index
+# samp3_pos = train[train['TARGET'] == 1].sample(frac=0.1, random_state=337, axis=0).index
+# samp3 = samp3_neg.append(samp3_pos)
+
+# samp4_neg = train[train['TARGET'] == 0].sample(frac=0.1, random_state=2356, axis=0).index
+# samp4_pos = train[train['TARGET'] == 1].sample(frac=0.1, random_state=2356, axis=0).index
+# samp4 = samp4_neg.append(samp4_pos)
+
+# samp5_neg = train[train['TARGET'] == 0].sample(frac=0.1, random_state=7654, axis=0).index
+# samp5_pos = train[train['TARGET'] == 1].sample(frac=0.1, random_state=7654, axis=0).index
+# samp5 = samp5_neg.append(samp5_pos)
+
+# samp6_neg = train[train['TARGET'] == 0].sample(frac=0.1, random_state=11112, axis=0).index
+# samp6_pos = train[train['TARGET'] == 1].sample(frac=0.1, random_state=11112, axis=0).index
+# samp6 = samp6_neg.append(samp6_pos)
+
+# svm1.fit(normalized_train_test[samp1, :])
+# svm2.fit(normalized_train_test[samp2, :])
+# # svm3.fit(normalized_train_test[samp3, :])
+# # svm4.fit(normalized_train_test[samp4, :])
+# # svm5.fit(normalized_train_test[samp5, :])
+# # svm6.fit(normalized_train_test[samp6, :])
+
+# svm1_predictions = svm1.predict(normalized_train_test)
+# svm2_predictions = svm2.predict(normalized_train_test)
+# # svm3_predictions = svm3.predict(normalized_train_test)
+# # svm4_predictions = svm4.predict(normalized_train_test)
+# # svm5_predictions = svm5.predict(normalized_train_test)
+# # svm6_predictions = svm6.predict(normalized_train_test)
+
+# train.insert(1, 'svm_one', svm1_predictions[:train.shape[0]])
+# train.insert(1, 'svm_two', svm2_predictions[:train.shape[0]])
+# # train.insert(1, 'svm_three', svm3_predictions[:train.shape[0]])
+# # train.insert(1, 'svm_four', svm4_predictions[:train.shape[0]])
+# # train.insert(1, 'svm_five', svm5_predictions[:train.shape[0]])
+# # train.insert(1, 'svm_six', svm6_predictions[:train.shape[0]])
+
+# test.insert(1, 'svm_one', svm1_predictions[train.shape[0]:])
+# test.insert(1, 'svm_two', svm2_predictions[train.shape[0]:])
+# test.insert(1, 'svm_three', svm3_predictions[train.shape[0]:])
+# test.insert(1, 'svm_four', svm4_predictions[train.shape[0]:])
+# test.insert(1, 'svm_five', svm5_predictions[train.shape[0]:])
+# test.insert(1, 'svm_six', svm6_predictions[train.shape[0]:])
+
 # fa = LatentDirichletAllocation(n_topics=6, random_state=42)
 # fa_train_test_projected = fa.fit_transform(normalized_train_test)
 
@@ -677,6 +1091,41 @@ test.insert(1, 'PCASix', x_train_test_projected[train.shape[0]:, 5])
 #lowest_ranking_features =  list(set(features)-(set(tokeep)))
 #train.drop(lowest_ranking_features, axis=1, inplace=True)
 #test.drop(lowest_ranking_features, axis=1, inplace=True)
+
+# train.insert(1, 'delta_imp_amort',
+#     ((train['delta_imp_amort_var18_1y3'] == 9999999999) | (train['delta_imp_amort_var34_1y3'] == 9999999999)).astype(int))
+# test.insert(1, 'delta_imp_amort',
+#     ((test['delta_imp_amort_var18_1y3'] == 9999999999) | (test['delta_imp_amort_var34_1y3'] == 9999999999)).astype(int))
+
+# train['delta_imp_aport_var13_1y3'] = train['delta_imp_aport_var13_1y3'] \
+#     .apply(lambda x: 0 if x == 9999999999 else x)
+# test['delta_imp_aport_var13_1y3'] = test['delta_imp_aport_var13_1y3'] \
+#     .apply(lambda x: 0 if x == 9999999999 else x)
+# train['delta_num_aport_var13_1y3'] = train['delta_num_aport_var13_1y3'] \
+#     .apply(lambda x: 0 if x == 9999999999 else x)
+# test['delta_num_aport_var13_1y3'] = test['delta_num_aport_var13_1y3'] \
+#     .apply(lambda x: 0 if x == 9999999999 else x)
+
+# train['delta_imp_aport_var17_1y3'] = train['delta_imp_aport_var17_1y3'] \
+#     .apply(lambda x: 0 if x == 9999999999 else x)
+# test['delta_imp_aport_var17_1y3'] = test['delta_imp_aport_var17_1y3'] \
+#     .apply(lambda x: 0 if x == 9999999999 else x)
+# train['delta_num_aport_var17_1y3'] = train['delta_num_aport_var17_1y3'] \
+#     .apply(lambda x: 0 if x == 9999999999 else x)
+# test['delta_num_aport_var17_1y3'] = test['delta_num_aport_var17_1y3'] \
+#     .apply(lambda x: 0 if x == 9999999999 else x)
+
+# train['delta_imp_aport_var33_1y3'] = train['delta_imp_aport_var33_1y3'] \
+#     .apply(lambda x: 0 if x == 9999999999 else x)
+# test['delta_imp_aport_var33_1y3'] = test['delta_imp_aport_var33_1y3'] \
+#     .apply(lambda x: 0 if x == 9999999999 else x)
+# train['delta_num_aport_var33_1y3'] = train['delta_num_aport_var33_1y3'] \
+#     .apply(lambda x: 0 if x == 9999999999 else x)
+# test['delta_num_aport_var33_1y3'] = test['delta_num_aport_var33_1y3'] \
+#     .apply(lambda x: 0 if x == 9999999999 else x)
+
+#train.drop(['delta_imp_amort_var18_1y3'], axis=1, inplace=True)
+#test.drop(['delta_imp_amort_var18_1y3'], axis=1, inplace=True)
 
 
 features = train.columns[1: -1]
@@ -728,12 +1177,14 @@ params['min_child_weight'] = 7
 params['max_delta_step'] = 0
 params['subsample'] = 0.8
 params['colsample_bytree'] = 0.5
-#params['colsample_bylevel'] = 0.7
+#params['colsample_bylevel'] = 0.8
 params['lambda'] = 1
 params['alpha'] = 0
 params['seed'] = 4242
 params['silent'] = 1
 #params['scale_pos_weight'] = 10
+params['nthread'] = 4
+#params['base_score'] = 0.04
 
 # params["eta"] = 0.0202048
 # params["subsample"] = 0.6815
@@ -744,7 +1195,7 @@ params['silent'] = 1
 
 
 
-num_rounds = 1600
+num_rounds = 800
 
 train_train_scores = []
 train_test_scores = []
@@ -768,14 +1219,16 @@ for folds in repeated_folds[:1]:
 
         dtrain_train = xgb.DMatrix(csr_matrix(train_train[features]),
                                    train_train.TARGET.values,
+                                   missing=9999999999,
                                    silent=True)
         dtrain_test = xgb.DMatrix(csr_matrix(train_test[features]),
                                   train_test.TARGET.values,
+                                  missing=9999999999,
                                   silent=True)
 
         watchlist = [(dtrain_train, 'train'), (dtrain_test, 'test')]
         model = xgb.train(params, dtrain_train, num_rounds,
-                          evals=watchlist, early_stopping_rounds=175,
+                          evals=watchlist, early_stopping_rounds=500,
                           verbose_eval=False)
 
         train_train_pred = model.predict(dtrain_train, ntree_limit=model.best_iteration)
@@ -788,6 +1241,7 @@ for folds in repeated_folds[:1]:
                                     #average='weighted')
 
         dtest = xgb.DMatrix(csr_matrix(test[features]),
+                            missing=9999999999,
                             silent=True)
         test_pred = model.predict(dtest, ntree_limit=model.best_iteration)
         #avg_rank = rankdata(test_pred, method='average')
@@ -816,7 +1270,7 @@ print('Avg test score:', np.mean(train_test_scores))
 print('Test std:', np.std(train_test_scores))
 print()
 
-version = '3.04'
+version = '3.05'
 sub = submission[submission.columns.difference(['ID'])].mean(axis=1)
 preds = sub
 #preds = minmax_scale(sub)
